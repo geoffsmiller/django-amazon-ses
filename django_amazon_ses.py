@@ -130,11 +130,19 @@ class EmailBackend(BaseEmailBackend):
         recipients = [sanitize_address(addr, email_message.encoding)
                       for addr in email_message.recipients()]
         message = email_message.message().as_bytes(linesep='\r\n')
-        from_arn = email_message.from_arn
-        source_arn = email_message.source_arn
-        return_path_arn = email_message.return_path_arn
-        tags = email_message.tags
-        configuration_set_name = email_message.configuration_set_name
+
+        # We need to do this because Boto will not accept None for these
+        # arguments.
+        kwargs = {
+            'FromArn': email_message.from_arn,
+            'SourceArn': email_message.source_arn,
+            'ReturnPathArn': email_message.return_path_arn,
+            'Tags': email_message.tags,
+            'ConfigurationSetName': email_message.configuration_set_name
+        }
+        for k, v in enumerate(kwargs):
+            if not v:
+                del kwargs[k]
 
         try:
             result = self.conn.send_raw_email(
@@ -143,11 +151,7 @@ class EmailBackend(BaseEmailBackend):
                 RawMessage={
                     'Data': message
                 },
-                FromArn=from_arn,
-                SourceArn=source_arn,
-                ReturnPathArn=return_path_arn,
-                Tags=tags,
-                ConfigurationSetName=configuration_set_name
+                **kwargs
             )
             message_id = result['MessageId']
             post_send.send(
