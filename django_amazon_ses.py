@@ -36,7 +36,7 @@ class SESEmailMessage(EmailMessage):
     def format_tags(self, tags):
         tags = []
         if tags:
-            for k, v in enumerate(tags):
+            for k, v in tags.items():
                 tags.append({
                     'Name': k,
                     'Value': v
@@ -133,16 +133,17 @@ class EmailBackend(BaseEmailBackend):
 
         # We need to do this because Boto will not accept None for these
         # arguments.
-        kwargs = {
+        all_kwargs = {
             'FromArn': email_message.from_arn,
             'SourceArn': email_message.source_arn,
             'ReturnPathArn': email_message.return_path_arn,
             'Tags': email_message.tags,
             'ConfigurationSetName': email_message.configuration_set_name
         }
-        for k, v in enumerate(kwargs):
-            if not v:
-                del kwargs[k]
+        kwargs = {}
+        for k, v in all_kwargs.items():
+            if v:
+                kwargs[k] = v
 
         try:
             result = self.conn.send_raw_email(
