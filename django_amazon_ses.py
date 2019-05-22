@@ -4,6 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from django.conf import settings
+from django.core.mail import EmailMessage
 from django.core.mail.backends.base import BaseEmailBackend
 from django.core.mail.message import sanitize_address
 from django.dispatch import Signal
