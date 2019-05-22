@@ -12,6 +12,37 @@ pre_send = Signal(providing_args=['message'])
 post_send = Signal(providing_args=['message', 'message_id'])
 
 
+class SESEmailMessage(EmailMessage):
+    """
+    A version of EmailMessage that adds specification of SES-specific
+    parameters that are passed to an SES send_raw_
+    """
+
+    def __init__(self, subject='', body='', from_email=None, to=None, bcc=None,
+                 connection=None, attachments=None, headers=None, cc=None,
+                 reply_to=None, from_arn=None, source_arn=None,
+                 return_path_arn=None, tags=None, configuration_set_name=None):
+        super(SESEmailMessage, self).__init__(
+            subject, body, from_email, to, bcc, connection, attachments,
+            headers, cc, reply_to,
+        )
+        self.from_arn = from_arn
+        self.source_arn = source_arn
+        self.return_path_arn = return_path_arn
+        self.tags = self.format_tags(tags)
+        self.configuration_set_name = configuration_set_name
+
+    def format_tags(self, tags):
+        tags = []
+        if tags:
+            for k, v in enumerate(tags):
+                tags.append({
+                    'Name': k,
+                    'Value': v
+                })
+        return tags
+
+
 class EmailBackend(BaseEmailBackend):
     """An email backend for use with Amazon SES.
 
@@ -98,6 +129,11 @@ class EmailBackend(BaseEmailBackend):
         recipients = [sanitize_address(addr, email_message.encoding)
                       for addr in email_message.recipients()]
         message = email_message.message().as_bytes(linesep='\r\n')
+        from_arn = email_message.from_arn
+        source_arn = email_message.source_arn
+        return_path_arn = email_message.return_path_arn
+        tags = email_message.tags
+        configuration_set_name = email_message.configuration_set_name
 
         try:
             result = self.conn.send_raw_email(
@@ -105,7 +141,12 @@ class EmailBackend(BaseEmailBackend):
                 Destinations=recipients,
                 RawMessage={
                     'Data': message
-                }
+                },
+                FromArn=from_arn,
+                SourceArn=source_arn,
+                ReturnPathArn=return_path_arn,
+                Tags=tags,
+                ConfigurationSetName=configuration_set_name
             )
             message_id = result['MessageId']
             post_send.send(
