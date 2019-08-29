@@ -4,7 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from django.conf import settings
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMultiAlternatives
 from django.core.mail.backends.base import BaseEmailBackend
 from django.core.mail.message import sanitize_address
 from django.dispatch import Signal
@@ -13,16 +13,17 @@ pre_send = Signal(providing_args=['message'])
 post_send = Signal(providing_args=['message', 'message_id'])
 
 
-class SESEmailMessage(EmailMessage):
+class SESEmailMessage(EmailMultiAlternatives):
     """
-    A version of EmailMessage that adds specification of SES-specific
+    A version of EmailMultiAlternatives that adds specification of SES-specific
     parameters that are passed to an SES send_raw_
     """
 
     def __init__(self, subject='', body='', from_email=None, to=None, bcc=None,
-                 connection=None, attachments=None, headers=None, cc=None,
-                 reply_to=None, from_arn=None, source_arn=None,
-                 return_path_arn=None, tags=None, configuration_set_name=None):
+                 connection=None, attachments=None, headers=None,
+                 alternatives=None, cc=None, reply_to=None, from_arn=None,
+                 source_arn=None, return_path_arn=None, tags=None,
+                 configuration_set_name=None):
         super(SESEmailMessage, self).__init__(
             subject, body, from_email, to, bcc, connection, attachments,
             headers, cc, reply_to,
@@ -32,6 +33,7 @@ class SESEmailMessage(EmailMessage):
         self.return_path_arn = return_path_arn
         self.tags = self.format_tags(tags)
         self.configuration_set_name = configuration_set_name
+        self.alternatives = alternatives or []
 
     def format_tags(self, tags):
         tags = []
